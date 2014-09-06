@@ -1,3 +1,4 @@
+
 /*
  * (C) 2010-2011 Alibaba Group Holding Limited
  *
@@ -15,21 +16,36 @@
  *
  */
 
+
 #include "tsar.h"
 
-void do_debug(log_level_t level, const char *fmt, ...)
-{
-	//FIXME
-	if (level >= conf.debug_level) {
-		va_list	argp;
-		time_t	timep;
 
-		time(&timep);
-		va_start(argp, fmt);
-		vfprintf(stderr, fmt, argp);
-		fflush(stderr);
-		va_end(argp);
-	}
-	if (level == LOG_FATAL)
-		exit(1);
+void
+_do_debug(log_level_t level, const char *file, int line, const char *fmt, ...)
+{
+    char      *timestr;
+    time_t     timep;
+    va_list    argp;
+    struct tm *local;
+
+    /* FIXME */
+    if (level >= conf.debug_level) {
+
+        time(&timep);
+        local = localtime(&timep);
+        timestr = asctime(local);
+
+        fprintf(stderr, "[%.*s] %s:%d ", 
+                (int)(strlen(timestr) - 1), timestr, file, line);
+
+        va_start(argp, fmt);
+        vfprintf(stderr, fmt, argp);
+        fflush(stderr);
+        va_end(argp);
+    }
+
+    if (level == LOG_FATAL) {
+        fprintf(stderr, "\n");
+        exit(1);
+    }
 }

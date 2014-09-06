@@ -1,3 +1,4 @@
+
 /*
  * (C) 2010-2011 Alibaba Group Holding Limited
  *
@@ -15,43 +16,53 @@
  *
  */
 
+
 #include "tsar.h"
 
 
-void output_file()
+void
+output_file()
 {
-	struct 	module *mod;
-	FILE	*fp = NULL;
-	int	i, ret = 0;
-	char	line[LEN_4096] = {0};
-	char	detail[LEN_1024] = {0};
-	char	s_time[LEN_256] = {0};
+    int    i, ret, n = 0;
+    FILE  *fp = NULL;
+    char   line[LEN_40960] = {0};
+    char   detail[LEN_10240] = {0};
+    char   s_time[LEN_256] = {0};
+    struct module *mod;
 
-	if (!(fp = fopen(conf.output_file_path, "a+"))) {
-		if (!(fp = fopen(conf.output_file_path, "w")))
-			do_debug(LOG_FATAL, "output_file: can't create data file = %s  err=%d\n", conf.output_file_path, errno);
-	}
+    if (!(fp = fopen(conf.output_file_path, "a+"))) {
+        if (!(fp = fopen(conf.output_file_path, "w"))) {
+            do_debug(LOG_FATAL, "output_file: can't create data file = %s  err=%d\n", conf.output_file_path, errno);
+        }
+    }
 
-	sprintf(s_time, "%ld", statis.cur_time);
-	strcat(line, s_time);
+    sprintf(s_time, "%ld", statis.cur_time);
+    strcat(line, s_time);
 
-	for (i = 0; i < statis.total_mod_num; i++) {
-		mod = &mods[i];
-		if (mod->enable && strlen(mod->record)) {
-			/* save collect data to output_file */
-			sprintf(detail, "%s%s%s%s", SECTION_SPLIT, mod->opt_line, STRING_SPLIT, mod->record);
-			strcat(line, detail);
-			ret = 1;
-		}
-	}
-	strcat(line, "\n");
+    for (i = 0; i < statis.total_mod_num; i++) {
+        mod = &mods[i];
+        if (mod->enable && strlen(mod->record)) {
+            /* save collect data to output_file */
+            n = snprintf(detail, LEN_10240, "%s%s%s%s", SECTION_SPLIT, mod->opt_line, STRING_SPLIT, mod->record);
+            if (n >= LEN_10240 - 1) {
+                do_debug(LOG_FATAL, "mod %s lenth is overflow %d\n", mod->name, n);
+            }
+	    /* one for \n one for \0 */
+            if (strlen(line) + strlen(detail) >= LEN_40960 - 2) {
+                do_debug(LOG_FATAL, "tsar.data line lenth is overflow line %d detail %d\n", strlen(line), strlen(detail));
+            }
+            strcat(line, detail);
+            ret = 1;
+        }
+    }
+    strcat(line, "\n");
 
-	if (ret) {
-		if(fputs(line, fp) < 0)
-			 do_debug(LOG_WARN, "write line error\n");
-	}
-	fclose(fp);
-	if(chmod(conf.output_file_path, 0666) < 0 )
-		do_debug(LOG_WARN, "chmod file %s error\n",conf.output_file_path);
+    if (ret) {
+        if (fputs(line, fp) < 0) {
+            do_debug(LOG_ERR, "write line error\n");
+        }
+    }
+    if (fclose(fp) < 0) {
+        do_debug(LOG_FATAL, "fclose error:%s", strerror(errno));
+    }
 }
-

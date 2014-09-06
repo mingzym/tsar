@@ -60,6 +60,8 @@ make install DESTDIR=%{buildroot}
 %attr(755,root,root) %dir /usr/bin/tsardevel
 
 %changelog
+* Wed Jan  6 2013 Ke Li <kongjian@taobao.com>
+- merge inner and opensource tsar
 * Wed May 11 2011 Ke Li <kongjian@taobao.com>
 - add devel for module develop
 * Thu Mar 22 2011 Ke Li <kongjian@taobao.com>

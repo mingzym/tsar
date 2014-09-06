@@ -33,3 +33,5 @@ config.h
 
 .svn
 */.svn/
+
+*.DS_Store

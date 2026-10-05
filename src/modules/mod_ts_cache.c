@@ -47,7 +47,7 @@ read_ts_cache_stats(struct module *mod)
     int                    pos;
     char                   buf[LINE_4096];
     struct sockaddr_un     un;
-    struct stats_ts_cache  st_ts;
+    struct stats_ts_cache  st_ts = {0,0,0,0,0,0,0};
 
     if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
         goto done;
@@ -105,7 +105,7 @@ done:
     if (-1 != fd) {
         close(fd);
     }
-    pos = sprintf(buf, "%lld,%lld,%lld,%lld,%lld,%lld,%lld",
+    pos = sprintf(buf, "%lld,%lld,%lld,%lld,%lld,%lld",
             st_ts.hit,
             st_ts.ram_hit,
             st_ts.band,

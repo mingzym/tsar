@@ -60,7 +60,7 @@ read_ts_os_stats(struct module *mod)
     int                 fd = -1;
     char                buf[LINE_4096];
     struct sockaddr_un  un;
-    struct stats_ts_os  st_ts;
+    struct stats_ts_os  st_ts = {0,0,0,0};
     if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
         goto done;
     }

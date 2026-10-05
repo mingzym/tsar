@@ -214,7 +214,7 @@ get_st_array_from_file(int have_collect)
     struct module *mod;
 
     if (!have_collect) {
-        collect_record(0);
+        collect_record();
     }
 
     /* update module parameter */

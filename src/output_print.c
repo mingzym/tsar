@@ -456,7 +456,8 @@ find_offset_from_start(FILE *fp, int number)
 long
 set_record_time(const char *line)
 {
-    char        *token, s_time[LEN_32] = {0};
+    const char  *token;
+    char         s_time[LEN_32] = {0};
     static long  pre_time, c_time = 0;
 
     /* get record time */
@@ -484,7 +485,8 @@ set_record_time(const char *line)
 int
 check_time(const char *line)
 {
-    char       *token, s_time[LEN_32] = {0};
+    const char *token;
+    char        s_time[LEN_32] = {0};
     long        now_time = 0;
     static long pre_time;
 
@@ -633,7 +635,7 @@ init_running_print()
         /*find all possible record*/
         for (i=1; ; i++) {
             memset(filename, 0, sizeof(filename));
-            sprintf(filename, "%s.%d", conf.output_file_path, i);
+            sprintf(filename, "%.116s.%d", conf.output_file_path, i);
             fptmp = fopen(filename, "r");
             if (!fptmp) {
                 conf.print_file_number = i - 1;
@@ -722,7 +724,7 @@ running_print()
                     sprintf(filename, "%s", conf.output_file_path);
 
                 } else {
-                    sprintf(filename, "%s.%d", conf.output_file_path, conf.print_file_number);
+                    sprintf(filename, "%.116s.%d", conf.output_file_path, conf.print_file_number);
                 }
                 if (fclose(fp) < 0) {
                     do_debug(LOG_FATAL, "fclose error:%s", strerror(errno));
@@ -804,7 +806,7 @@ running_check(int check_type)
     FILE      *fp;
     char       line[2][LEN_40960];
     char       filename[LEN_128] = {0};
-    char       tmp[9][LEN_4096];
+    char       tmp[10][LEN_4096];
     char       check[LEN_40960] = {0};
     char       host_name[LEN_64] = {0};
     struct     module *mod = NULL;
@@ -823,7 +825,7 @@ running_check(int check_type)
             break;
         }
     }
-    memset(tmp, 0, 9 * LEN_4096);
+    memset(tmp, 0, 10 * LEN_4096);
     sprintf(check, "%s\ttsar\t", host_name);
     sprintf(filename, "%s", conf.output_file_path);
     fp = fopen(filename, "r");
@@ -833,8 +835,8 @@ running_check(int check_type)
     /* check file update time */
     stat(filename, &statbuf);
     time(&nowtime);
-    if (nowtime - statbuf.st_ctime > 300) {
-        do_debug(LOG_FATAL, "/var/log/tsar.data is far away from now, last time is %s", ctime(&statbuf.st_ctime));
+    if (nowtime - statbuf.st_mtime > 300) {
+        do_debug(LOG_FATAL, "/var/log/tsar.data is far away from now, now time is %d, last time is %d", nowtime, statbuf.st_mtime);
     }
     /* get file len */
     memset(&line[0], 0, LEN_40960);
@@ -864,7 +866,7 @@ running_check(int check_type)
             do_debug(LOG_FATAL, "fclose error:%s", strerror(errno));
         }
         memset(filename, 0, sizeof(filename));
-        sprintf(filename, "%s.1", conf.output_file_path);
+        sprintf(filename, "%.125s.1", conf.output_file_path);
         fp = fopen(filename, "r");
         if (!fp) {
             do_debug(LOG_FATAL, "unable to open the log file %s.\n", filename);
@@ -910,7 +912,7 @@ running_check(int check_type)
         if (fclose(fp) < 0) {
             do_debug(LOG_FATAL, "fclose error:%s", strerror(errno));
         }
-        sprintf(filename, "%s.1", conf.output_file_path);
+        sprintf(filename, "%.125s.1", conf.output_file_path);
         fp = fopen(filename, "r");
         if (!fp) {
             do_debug(LOG_FATAL, "unable to open the log file %s\n", filename);
@@ -1189,8 +1191,19 @@ running_check(int check_type)
                     }
                 }
             }
+	    if (!strcmp(mod->name, "mod_swap")) {
+	        for (j = 0; j < mod->n_item; j++) {
+                    st_array = &mod->st_array[j * mod->n_col];
+                    if (!st_array || !mod->st_flag) {
+                        sprintf(tmp[9], " swap/total=- swap/util=-");
+
+                    } else {
+                        sprintf(tmp[9], " swap/total=%0.2f swap/util=%0.2f%%", st_array[2] / 1024 / 1024, st_array[3]);
+                    }
+                }
+	    }
         }
-        for (j = 0; j < 9; j++) {
+        for (j = 0; j < 10; j++) {
             strcat(check, tmp[j]);
         }
         printf("%s\n", check);

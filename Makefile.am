@@ -1,7 +1,7 @@
 ##CFLAGS = -Wall -fPIC --shared -g -O2 -Wno-strict-aliasing
 ##LINK = $(CC) -I$(INCLUDE_DIR) $(CFLAGS)
 
-AM_CPPFLAGS = -I $(top_srcdir)/include
+AM_CPPFLAGS = -I $(top_srcdir)/include -DDEFAULT_MODULE_FILE_PATH='"$(libdir)"'
 export AM_CPPFLAGS
 SUBDIRS = src devel conf
 	

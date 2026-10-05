@@ -117,7 +117,7 @@ read_proc_stats(struct module *mod, char *parameter)
     /* read+calc cpu total time from /proc/stat */
     fp = fopen("/proc/stat", "r");
     if (fp == NULL) {
-        fclose(fp);
+        //fclose(fp);
         return;
     }
     unsigned long long cpu_time[10];
@@ -137,7 +137,7 @@ read_proc_stats(struct module *mod, char *parameter)
     /* read total mem from /proc/meminfo */
     fp = fopen("/proc/meminfo", "r");
     if (fp == NULL) {
-        fclose(fp);
+        //fclose(fp);
         return;
     }
     if (fscanf(fp, "MemTotal:      %llu kB", &st_proc.total_mem) == EOF) {

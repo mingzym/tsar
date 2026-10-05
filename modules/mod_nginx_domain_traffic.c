@@ -18,9 +18,9 @@ int top_domain = 0;
 int all_domain = 0;
 
 struct stats_nginx_domain {
-    char domain[256];               /* domain name */
-    unsigned long long nbytesin;    /* total bytes in */
-    unsigned long long nbytesout;   /* total bytes out */
+    char domain[256];                   /* domain name */
+    unsigned long long nbytesin;        /* total bytes in */
+    unsigned long long nbytesout;       /* total bytes out */
     unsigned long long nconn;       /* total connections */
     unsigned long long nreq;        /* total requests */
     unsigned long long n2XX;        /* 2XX status code */
@@ -32,6 +32,12 @@ struct stats_nginx_domain {
     unsigned long long uprt;        /* response time sum of total upstream requests */
     unsigned long long upreq;       /* total upstream request */
     unsigned long long upactreq;    /* actual upstream requests */
+
+    unsigned long long nbytesout2XX;    /* total bytes out for 2XX request */
+    unsigned long long nbytesout3XX;    /* total bytes out for 3XX request */
+    unsigned long long nbytesout4XX;    /* total bytes out for 4XX request */
+    unsigned long long nbytesout5XX;    /* total bytes out for 5XX request */
+    unsigned long long nspdyreq;        /* number of spdy request */
 };
 
 /* struct for http domain */
@@ -49,20 +55,25 @@ struct hostinfo {
     char *uri;
 };
 
-static char *nginx_domain_usage = "    --nginx_domain      nginx domain statistics";
+static char *nginx_domain_traffic_usage = "    --nginx_domain_traffic      nginx domain traffic statistics";
 
 static struct mod_info nginx_info[] = {
-    {"   cps", SUMMARY_BIT, MERGE_SUM,  STATS_NULL},
+#if 0
     {"   qps", SUMMARY_BIT, MERGE_SUM,  STATS_NULL},
     {"   2XX", SUMMARY_BIT, MERGE_SUM,  STATS_NULL},
     {"   3XX", SUMMARY_BIT, MERGE_SUM,  STATS_NULL},
     {"   4XX", SUMMARY_BIT, MERGE_SUM,  STATS_NULL},
     {"   5XX", SUMMARY_BIT, MERGE_SUM,  STATS_NULL},
-    {"    rt", SUMMARY_BIT, MERGE_SUM,  STATS_NULL},
-    {"  uprt", SUMMARY_BIT, MERGE_SUM,  STATS_NULL},
-    {" upret", SUMMARY_BIT, MERGE_SUM,  STATS_NULL},
-    {" upqps", HIDE_BIT, MERGE_SUM,  STATS_NULL}
+#endif
+    {" bytin", SUMMARY_BIT, MERGE_SUM,  STATS_NULL},
+    {"bytout", SUMMARY_BIT, MERGE_SUM,  STATS_NULL},
+    {"2XXout", SUMMARY_BIT, MERGE_SUM,  STATS_NULL},
+    {"3XXout", SUMMARY_BIT, MERGE_SUM,  STATS_NULL},
+    {"4XXout", SUMMARY_BIT, MERGE_SUM,  STATS_NULL},
+    {"5XXout", SUMMARY_BIT, MERGE_SUM,  STATS_NULL},
+    {"spdqps", SUMMARY_BIT, MERGE_SUM,  STATS_NULL}
 };
+
 
 static void nginx_domain_init(char *parameter)
 {
@@ -119,33 +130,19 @@ static void nginx_domain_init(char *parameter)
     }
 }
 
+
 static void
 set_nginx_domain_record(struct module *mod, double st_array[],
     U_64 pre_array[], U_64 cur_array[], int inter)
 {
     int i;
 
-    for (i = 0; i < 6; i++) {
+    for (i = 0; i < 7; i++) {
         if (cur_array[i] >= pre_array[i]) {
             st_array[i] = (cur_array[i] - pre_array[i]) * 1.0 / inter;
         } else {
             st_array[i] = 0;
         }
-    }
-
-    /* avg_rt = (cur_rt - pre_rt) / (cur_nreq - pre_nreq) */
-    if (cur_array[6] >= pre_array[6] && cur_array[1] > pre_array[1]) {
-        st_array[6] = (cur_array[6] - pre_array[6]) * 1.0 / (cur_array[1] - pre_array[1]);
-    }
-
-    /* upstream request rt */
-    if (cur_array[7] >= pre_array[7] && cur_array[9] > pre_array[9]) {
-        st_array[7] = (cur_array[7] - pre_array[7]) * 1.0 / (cur_array[9] - pre_array[9]);
-    }
-
-    /* upstream retry percent = (actual upstream request - total upstream request)/total upstream request */
-    if (cur_array[8] >= pre_array[8] && cur_array[9] > pre_array[9] && (cur_array[9] - pre_array[9]) >= (cur_array[8] - pre_array[8])) {
-        st_array[8] = ((cur_array[9] - pre_array[9]) - (cur_array[8] - pre_array[8])) * 1.0 / (cur_array[9] - pre_array[9]);
     }
 }
 
@@ -169,8 +166,8 @@ init_nginx_host_info(struct hostinfo *p)
 }
 
 
-void
-read_nginx_domain_stats(struct module *mod, char *parameter)
+static void
+read_nginx_domain_traffic_stats(struct module *mod, char *parameter)
 {
     int                 i, addr_len, domain, m, sockfd, send, pos = 0;
     char                buf[LEN_10240], request[LEN_4096], line[LEN_4096];
@@ -242,11 +239,39 @@ read_nginx_domain_stats(struct module *mod, char *parameter)
         *p++ = '\0';    /* stat.domain terminating null */
 
         memset(&stat, 0, sizeof(struct stats_nginx_domain));
-        if (sscanf(p, "%llu,%llu,%llu,%llu,%llu,%llu,%llu,%llu,%llu,%llu,%llu,%llu,%llu,"
-                   "%*u,%*u,%*u,%*u,%*u,%*u,%*u,%*u,%*u,%*u,%*u,%*u,%*u,%*u",
-                   &stat.nbytesin, &stat.nbytesout, &stat.nconn, &stat.nreq, &stat.n2XX, &stat.n3XX, &stat.n4XX, &stat.n5XX, &stat.nother, &stat.rt, &stat.upreq, &stat.uprt, &stat.upactreq) != 13) {
+        if (sscanf(p,
+                   "%llu,%llu,%llu,%llu,"         /* 4 */
+                   "%llu,%llu,%llu,%llu,%llu,"    /* 4 + 5 = 9 */
+                   "%llu,%llu,%llu,%llu,"         /* 4 + 5 + 4 = 13 */
+                   "%*u,%*u,%*u,%*u,%*u,%*u,%*u,%*u,%*u,%*u,%*u,%*u,%*u,%*u,%*u,%*u", /* 4 + 5 + 4 + 16 = 29 */
+                   &stat.nbytesin, &stat.nbytesout, &stat.nconn, &stat.nreq,
+                   &stat.n2XX, &stat.n3XX, &stat.n4XX, &stat.n5XX, &stat.nother,
+                   &stat.rt, &stat.upreq, &stat.uprt, &stat.upactreq)
+            != 13)
+        {
             continue;
         }
+        /* skip 29 fields */
+        for (i = 0; *p != '\0'; p++) {
+            if (*p == ',') {
+                i++;
+            }
+            if (i == 29) {
+                break;
+            }
+        }
+        if (i != 29) {
+            continue;
+        }
+        p++;    /* skip `,' */
+        /* get 2xx out,3xx out,4xx out,5xx,spdy req out */
+        if (sscanf(p, "%llu,%llu,%llu,%llu,%llu",
+                   &stat.nbytesout2XX, &stat.nbytesout3XX, &stat.nbytesout4XX, &stat.nbytesout5XX, &stat.nspdyreq)
+            != 5)
+        {
+            continue;
+        }
+        /* get last 4 entries */
         strcpy(stat.domain, line);
         if(strlen(stat.domain) == 0) {
             strcpy(stat.domain, "null");
@@ -277,8 +302,15 @@ read_nginx_domain_stats(struct module *mod, char *parameter)
     qsort(nginx_domain_stats, domain_num, sizeof(nginx_domain_stats[0]), nginxcmp);
 
     for (i=0; i< top_domain; i++) {
-        pos += snprintf(buf + pos, LEN_10240 - pos, "%s=%lld,%lld,%lld,%lld,%lld,%lld,%lld,%lld,%lld,%lld" ITEM_SPLIT,
-                       nginx_domain_stats[i].domain, nginx_domain_stats[i].nconn, nginx_domain_stats[i].nreq, nginx_domain_stats[i].n2XX, nginx_domain_stats[i].n3XX, nginx_domain_stats[i].n4XX, nginx_domain_stats[i].n5XX, nginx_domain_stats[i].rt, nginx_domain_stats[i].uprt, nginx_domain_stats[i].upreq, nginx_domain_stats[i].upactreq);
+        pos += snprintf(buf + pos, LEN_10240 - pos, "%s=%lld,%lld,%lld,%lld,%lld,%lld,%lld" ITEM_SPLIT,
+                  nginx_domain_stats[i].domain,
+                  nginx_domain_stats[i].nbytesin,
+                  nginx_domain_stats[i].nbytesout,
+                  nginx_domain_stats[i].nbytesout2XX,
+                  nginx_domain_stats[i].nbytesout3XX,
+                  nginx_domain_stats[i].nbytesout4XX,
+                  nginx_domain_stats[i].nbytesout5XX,
+                  nginx_domain_stats[i].nspdyreq);
         if (strlen(buf) == LEN_10240 - 1) {
             fclose(stream);
             close(sockfd);
@@ -291,8 +323,10 @@ read_nginx_domain_stats(struct module *mod, char *parameter)
     close(sockfd);
 }
 
+
 void
 mod_register(struct module *mod)
 {
-    register_mod_fileds(mod, "--nginx_domain", nginx_domain_usage, nginx_info, 10, read_nginx_domain_stats, set_nginx_domain_record);
+    register_mod_fileds(mod, "--nginx_domain_traffic", nginx_domain_traffic_usage, nginx_info, 7,
+                        read_nginx_domain_traffic_stats, set_nginx_domain_record);
 }

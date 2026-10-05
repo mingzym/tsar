@@ -5,7 +5,6 @@
 static char *cgblkio_usage = "    --cgblkio            cgroup blkio statistics";
 
 #define MAX_GROUP 64
-#define MAX_NAME_LENGTH 128
 #define CGBLKIO_PATH "/cgroup/blkio"
 #define SECTOR_SIZE 512
 #define MAX_DISKNAME 32
@@ -15,7 +14,7 @@ static char *cgblkio_usage = "    --cgblkio            cgroup blkio statistics";
 unsigned int n_group;
 
 struct cgblkio_group_info {
-    char               group_name[MAX_NAME_LENGTH];
+    char               group_name[NAME_MAX];
     unsigned long long rd_merges;
     unsigned long long wr_merges;
     unsigned long long rd_ios;
@@ -124,7 +123,7 @@ void
 read_cgblkio_stats(struct module *mod)
 {
     DIR               *dir;
-    char               path[128], buffer[128];
+    char               path[PATH_MAX], buffer[NAME_MAX];
     FILE              *iofd;
     struct dirent     *ent;          /* dirent handle */
     struct blkio_info  curr;
@@ -140,12 +139,12 @@ read_cgblkio_stats(struct module *mod)
         if (ent->d_type == DT_DIR && !ISDOT(ent->d_name)) {
             memcpy(&blkio_groups[n_group].group_name, ent->d_name, strlen(ent->d_name) + 1);
 
-            snprintf(path, 128, "%s/%s/blkio.io_merged", CGBLKIO_PATH, ent->d_name);
+            snprintf(path, PATH_MAX, "%s/%s/blkio.io_merged", CGBLKIO_PATH, ent->d_name);
             if ((iofd = fopen(path, "r")) == NULL) {
                 closedir(dir);
                 return;
             }
-            while (fgets(buffer, 128, iofd) != NULL) {
+            while (fgets(buffer, NAME_MAX, iofd) != NULL) {
                 if (sscanf(buffer, "%s %s %llu", curr.disk, curr.type, &curr.num) == 3) {
                     if (!strncmp(curr.type, "Read", 4))
                         blkio_groups[n_group].rd_merges += curr.num;
@@ -157,12 +156,12 @@ read_cgblkio_stats(struct module *mod)
                 return;
             }
 
-            snprintf(path, 128, "%s/%s/blkio.io_serviced", CGBLKIO_PATH, ent->d_name);
+            snprintf(path, PATH_MAX, "%s/%s/blkio.io_serviced", CGBLKIO_PATH, ent->d_name);
             if ((iofd = fopen(path, "r")) == NULL) {
                 closedir(dir);
                 return;
             }
-            while (fgets(buffer, 128, iofd) != NULL) {
+            while (fgets(buffer, NAME_MAX, iofd) != NULL) {
                 if (sscanf(buffer, "%s %s %llu", curr.disk, curr.type, &curr.num) == 3) {
                     if (!strncmp(curr.type, "Read", 4))
                         blkio_groups[n_group].rd_ios += curr.num;
@@ -174,12 +173,12 @@ read_cgblkio_stats(struct module *mod)
                 return;
             }
 
-            snprintf(path, 128, "%s/%s/blkio.io_service_bytes", CGBLKIO_PATH, ent->d_name);
+            snprintf(path, PATH_MAX, "%s/%s/blkio.io_service_bytes", CGBLKIO_PATH, ent->d_name);
             if ((iofd = fopen(path, "r")) == NULL) {
                 closedir(dir);
                 return;
             }
-            while (fgets(buffer, 128, iofd) != NULL) {
+            while (fgets(buffer, NAME_MAX, iofd) != NULL) {
                 if (sscanf(buffer, "%s %s %llu", curr.disk, curr.type, &curr.num) == 3) {
                     if (!strncmp(curr.type, "Read", 4))
                         blkio_groups[n_group].rd_secs += curr.num / SECTOR_SIZE;
@@ -191,12 +190,12 @@ read_cgblkio_stats(struct module *mod)
                 return;
             }
 
-            snprintf(path, 128, "%s/%s/blkio.io_queued", CGBLKIO_PATH, ent->d_name);
+            snprintf(path, PATH_MAX, "%s/%s/blkio.io_queued", CGBLKIO_PATH, ent->d_name);
             if ((iofd = fopen(path, "r")) == NULL) {
                 closedir(dir);
                 return;
             }
-            while (fgets(buffer, 128, iofd) != NULL) {
+            while (fgets(buffer, NAME_MAX, iofd) != NULL) {
                 if (sscanf(buffer, "%s %s %llu", curr.disk, curr.type, &curr.num) == 3) {
                     if (!strncmp(curr.type, "Read", 4))
                         blkio_groups[n_group].qusize += curr.num;
@@ -208,12 +207,12 @@ read_cgblkio_stats(struct module *mod)
                 return;
             }
 
-            snprintf(path, 128, "%s/%s/blkio.io_service_time", CGBLKIO_PATH, ent->d_name);
+            snprintf(path, PATH_MAX, "%s/%s/blkio.io_service_time", CGBLKIO_PATH, ent->d_name);
             if ((iofd = fopen(path, "r")) == NULL) {
                 closedir(dir);
                 return;
             }
-            while (fgets(buffer, 128, iofd) != NULL) {
+            while (fgets(buffer, NAME_MAX, iofd) != NULL) {
                 if (sscanf(buffer, "%s %s %llu", curr.disk, curr.type, &curr.num) == 3) {
                     if (!strncmp(curr.type, "Read", 4))
                         blkio_groups[n_group].svctm += (unsigned long long)(curr.num / 1000000); //in ms
@@ -225,12 +224,12 @@ read_cgblkio_stats(struct module *mod)
                 return;
             }
 
-            snprintf(path, 128, "%s/%s/blkio.io_wait_time", CGBLKIO_PATH, ent->d_name);
+            snprintf(path, PATH_MAX, "%s/%s/blkio.io_wait_time", CGBLKIO_PATH, ent->d_name);
             if ((iofd = fopen(path, "r")) == NULL) {
                 closedir(dir);
                 return;
             }
-            while (fgets(buffer, 128, iofd) != NULL) {
+            while (fgets(buffer, NAME_MAX, iofd) != NULL) {
                 if (sscanf(buffer, "%s %s %llu", curr.disk, curr.type, &curr.num) == 3) {
                     if (!strncmp(curr.type, "Read", 4))
                         blkio_groups[n_group].wait += (unsigned long long)(curr.num / 1000000);

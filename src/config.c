@@ -101,10 +101,12 @@ parse_int(int *var)
 void
 parse_string(char *var)
 {
-    char   *token = strtok(NULL, W_SPACE);
+    if (var) {
+        char   *token = strtok(NULL, W_SPACE);
 
-    if (token) {
-        strncpy(var, token, strlen(token));
+        if (token) {
+            strncpy(var, token, strlen(token));
+        }
     }
 }
 
@@ -113,19 +115,11 @@ parse_add_string(char *var)
 {
     char   *token = strtok(NULL, W_SPACE);
 
-    if (var == NULL) {
-        if (token) {
-            strncpy(var, token, strlen(token));
+    if (var) {
+        if (var[0] != '\0') {
+            strcat(var, ",");
         }
-
-    } else {
-        if (token) {
-            strcat(token, ",");
-            strncat(token, var, strlen(var));
-        }
-        if (token) {
-            strncpy(var, token, strlen(token));
-        }
+        strncpy(var, token, strlen(token));
     }
 }
 
@@ -187,6 +181,13 @@ parse_line(char *buff)
 
     } else if (!strcmp(token, "output_db_mod")) {
         parse_add_string(conf.output_db_mod);
+
+    } else if (!strcmp(token, "output_tcp_mod")) {
+        parse_add_string(conf.output_tcp_mod);
+    } else if (!strcmp(token, "output_tcp_addr")) {
+        parse_string(conf.output_tcp_addr);
+    } else if (!strcmp(token, "output_tcp_merge")) {
+        parse_string(conf.output_tcp_merge);
 
     } else if (!strcmp(token, "output_nagios_mod")) {
         parse_add_string(conf.output_nagios_mod);

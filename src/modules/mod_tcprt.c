@@ -44,7 +44,7 @@ void prepare_data(char* shell_string)
             b_data_open = TRUE;
         }
 
-        write(fd,buf,strlen(buf));
+        if(write(fd,buf,strlen(buf))) {printf("error write data\n");};
     }
     pclose( stream );
     if (b_data_open && fd > 0) {

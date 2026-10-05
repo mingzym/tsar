@@ -293,7 +293,7 @@ read_swift_swapdir_stats(struct module *mod, char *parameter)
 
     for (p = 0; p < n_swapdir && p < MAX_PARTITIONS; p++) {
         swapdir_stats[p].offset = 100 * swapdir_stats[p].current_stripe / ((swapdir_stats[p].end - swapdir_stats[p].start) >> 23);
-        pos += sprintf(buf + pos, "%s=%lld,%lld,%lld,%lld,%lld,%lld",
+        pos += sprintf(buf + pos, "%.128s=%lld,%lld,%lld,%lld,%lld,%lld",
                        partition[p].name,
                        swapdir_stats[p].current_size,
                        swapdir_stats[p].object_count,

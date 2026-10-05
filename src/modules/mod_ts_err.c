@@ -71,7 +71,7 @@ read_ts_err_stats(struct module *mod)
     int                  pos;
     char                 buf[LINE_4096];
     struct sockaddr_un   un;
-    struct stats_ts_err  st_ts;
+    struct stats_ts_err  st_ts = {0,0,0,0,0,0,0,0};
     if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
         goto done;
     }

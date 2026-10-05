@@ -61,7 +61,7 @@ load_modules()
         mod = &mods[i];
         if (!mod->lib) {
             memset(mod_path, '\0', LEN_128);
-            snprintf(mod_path, LEN_128, "%s/%s.so", buff, mod->name);
+            snprintf(mod_path, LEN_128, "%s/%.123s.so", buff, mod->name);
             if (!(mod->lib = dlopen(mod_path, RTLD_NOW|RTLD_GLOBAL))) {
                 do_debug(LOG_ERR, "load_modules: dlopen module %s err %s\n", mod->name, dlerror());
 
@@ -155,7 +155,8 @@ reload_check_modules()
              || !strcmp(mod->name, "mod_io")
              || !strcmp(mod->name, "mod_tcp")
              || !strcmp(mod->name, "mod_traffic")
-             || !strcmp(mod->name, "mod_nginx"))
+             || !strcmp(mod->name, "mod_nginx")
+             || !strcmp(mod->name, "mod_swap"))
         {
             mod->enable = 1;
 

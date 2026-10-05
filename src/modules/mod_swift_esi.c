@@ -145,14 +145,14 @@ static void read_swift_esi_value(char *buf,
         long long *r1, long long *r2, long long *r3, long long *r4, long long *r5)
 {
     int       ret;
-    char      token[1024][9];
+    char      token[1024][11];
     long long ereq, emiss, ehit, ecomb, preload;
 
     memset(token, 0, sizeof(token));
-    ret = sscanf(buf, "%s%s%s%s%s%s%s%s%s%lld%lld%lld%lld%lld", token[0], token[1], token[2],
-                 token[3], token[4], token[5], token[6], token[7], token[8], &ereq, &emiss,
-                 &ehit, &ecomb, &preload);
-    if (ret != 14) {
+    ret = sscanf(buf, "%s%s%s%s%s%s%s%s%s%s%s%lld%lld%lld%lld%lld", token[0], token[1], token[2],
+                 token[3], token[4], token[5], token[6], token[7], token[8], token[9], token[10],
+                 &ereq, &emiss, &ehit, &ecomb, &preload);
+    if (ret != 16) {
         return;
     }
 
@@ -187,16 +187,19 @@ static void read_swift_esi_value(char *buf,
 static int parse_swift_code_info(char *buf, size_t buflen)
 {
     char           *line, *p, *pos, token[1024];
-    int             len, id;
+    int            id;
     domain_id_pair *pair, key;
+    int            found[1024] = {0};
 
     pos = buf;
-    len = strlen(buf);
 
     while (pos < buf + buflen) {
         if ((p = strchr(pos, '\n')) == NULL) {
             /* no newline, ill formatted */
             return -1;
+        } else if (p == pos + 1 || p == pos) {
+            pos = p + 1;
+            continue;
         }
 
         line = strndup(pos, (size_t)(p - pos));
@@ -214,6 +217,11 @@ static int parse_swift_code_info(char *buf, size_t buflen)
         }
 
         id = pair->id;
+        if (found[id] == 1) {
+            free(line);
+            continue;
+        }
+        found[id] = 1;
 
         read_swift_esi_value(line, &swift_esi_stats[id][0],
                                    &swift_esi_stats[id][1],
@@ -243,7 +251,7 @@ static void set_swift_esi_record(struct module *mod, double st_array[],
         st_array[0] = 0.0;
     }
 
-    if (cur_array[2] - pre_array[2] <= cur_array[4] - pre_array[4]) {
+    if (cur_array[2] - pre_array[2] < cur_array[4] - pre_array[4]) {
         st_array[1] = 0.0;
         st_array[2] = 0.0;
         st_array[3] = 0.0;

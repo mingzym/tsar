@@ -187,10 +187,6 @@ main_init(int argc, char **argv)
         conf.print_mode = DATA_DETAIL;
     }
 
-    strcpy(conf.config_file, DEFAULT_CONF_FILE_PATH);
-    if (access(conf.config_file, F_OK)) {
-        do_debug(LOG_FATAL, "main_init: can't find tsar.conf");
-    }
 }
 
 
@@ -238,13 +234,32 @@ running_cron()
     if (strstr(conf.output_interface, "nagios")) {
         output_nagios();
     }
+    if (strstr(conf.output_interface, "tcp")) {
+        output_tcp(have_collect);
+    }
 }
 
 
 int
 main(int argc, char **argv)
 {
-    parse_config_file(DEFAULT_CONF_FILE_PATH);
+    //
+    // find the config file first
+    //
+    const char *home = getenv("HOME"); // Get the user's home directory
+    // Build full path of personal config file
+    if (snprintf(conf.config_file, sizeof(conf.config_file), "%s/%s", home, PERSONAL_CONF_FILE_PATH)
+     >= sizeof(conf.config_file)) {
+        do_debug(LOG_FATAL, "Error: File path for user config too long.\n");
+    }
+    if (access(conf.config_file, F_OK)) {
+        strcpy(conf.config_file, DEFAULT_CONF_FILE_PATH);
+        if (access(conf.config_file, F_OK)) {
+            do_debug(LOG_FATAL, "main_init: can't find tsar.conf");
+        }
+    }
+
+    parse_config_file(conf.config_file);
 
     load_modules();
 

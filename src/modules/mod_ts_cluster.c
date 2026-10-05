@@ -3,6 +3,7 @@
 #include <sys/un.h>
 #include "tsar.h"
 
+#define IGNORE_RESULT(x) (void)(x)
 //return value type
 //const static short int TS_REC_INT = 0;
 //const static short int TS_REC_COUNTER = 0;
@@ -79,7 +80,7 @@ void read_ts_cluster_stats(struct module *mod)
 {
   int fd = -1;
   struct sockaddr_un un;
-  struct stats_ts_cluster st_ts;
+  struct stats_ts_cluster st_ts = {0,0,0,0,0,0,0,0,0,0,0};
   int pos;
   char buf[LINE_4096];
   if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
@@ -104,7 +105,8 @@ void read_ts_cluster_stats(struct module *mod)
     *((short int *)&write_buf[0]) = command;
     *((long int *)&write_buf[2]) = info_len;
     strcpy(write_buf+6, info);
-    write(fd, write_buf, 2+4+strlen(info));
+    size_t write_down = write(fd, write_buf, 2+4+strlen(info));
+      if (write_down == -1) { perror("write failed"); }
 
     short int ret_status = 0;
     short int ret_type = 0;

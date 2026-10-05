@@ -6,7 +6,6 @@ static char *cgcpu_usage = "    --cgcpu            cgroup cpu statistics";
 
 #define MAX_GROUP 64
 #define MAX_TASK 1024
-#define MAX_NAME_LENGTH 128
 #define CGCPU_PATH "/cgroup/cpu"
 
 #define ISDOT(a)        (a[0] == '.' && (!a[1] || (a[1] == '.' && !a[2])))
@@ -24,7 +23,7 @@ struct sched_info {
 };
 
 struct cgcpu_group_info {
-    char    group_name [MAX_NAME_LENGTH];
+    char    group_name [NAME_MAX];
     double  sum_exec_runtime;     /*sum of exec runtime counters*/
 };
 struct cgcpu_group_info cgcpu_groups[MAX_GROUP];
@@ -76,7 +75,7 @@ read_cgcpu_stats(struct module *mod)
     DIR            *dir;
     int             n_task = 0, i;
     FILE           *taskfd, *schedfd;
-    char            path[128], buffer[128];
+    char            path[PATH_MAX], buffer[NAME_MAX];
     const char     *scan_fmt = NULL;
     struct dirent  *ent;          /* dirent handle */
 
@@ -92,7 +91,7 @@ read_cgcpu_stats(struct module *mod)
             n_task = 0;
             memcpy(&cgcpu_groups[n_group].group_name, ent->d_name, strlen(ent->d_name) + 1);
 
-            snprintf(path, 128, "%s/%s/tasks", CGCPU_PATH, ent->d_name);
+            snprintf(path, PATH_MAX, "%s/%s/tasks", CGCPU_PATH, ent->d_name);
             if ((taskfd = fopen(path, "r")) == NULL) {
                 closedir(dir);
                 return;
@@ -115,7 +114,7 @@ read_cgcpu_stats(struct module *mod)
 
             /* read sum_exe_time of each task and add up */
             for (i = 0; i <= n_task; i++) {
-                snprintf(path, 128, "/proc/%d/sched", tasks[i].pid);
+                snprintf(path, PATH_MAX, "/proc/%d/sched", tasks[i].pid);
                 if ((schedfd = fopen(path, "r")) == NULL) {
                     closedir(dir);
                     return;

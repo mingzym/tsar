@@ -5,7 +5,6 @@
 static char *cgmem_usage = "    --cgmem            cgroup memory statistics";
 
 #define MAX_GROUP 64
-#define MAX_NAME_LENGTH 128
 #define CGMEM_PATH "/cgroup/memory"
 #define CGMEM_UNIT ( 1024 )
 
@@ -14,7 +13,7 @@ static char *cgmem_usage = "    --cgmem            cgroup memory statistics";
 unsigned int n_group;
 
 struct cgmem_group_info {
-    char          group_name [MAX_NAME_LENGTH];
+    char          group_name [NAME_MAX];
     unsigned long cache;
     unsigned long rss;
     unsigned long swap;
@@ -78,7 +77,7 @@ void
 read_cgmem_stats(struct module *mod)
 {
     DIR             *dir;
-    char            path[128];
+    char            path[PATH_MAX];
     char            line[LEN_128];
     FILE           *memfd;
     struct dirent  *ent;          /* dirent handle */
@@ -93,7 +92,7 @@ read_cgmem_stats(struct module *mod)
     while ((ent = readdir(dir))) {
         if (ent->d_type == DT_DIR && !ISDOT(ent->d_name)) {  //for each group
             memcpy(&cgmem_groups[n_group].group_name, ent->d_name, strlen(ent->d_name) + 1);
-            snprintf(path, 128, "%s/%s/memory.stat", CGMEM_PATH, ent->d_name);
+            snprintf(path, PATH_MAX, "%s/%s/memory.stat", CGMEM_PATH, ent->d_name);
             if ((memfd = fopen(path, "r")) == NULL) {
                 closedir(dir);
                 return;
